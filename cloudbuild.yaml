@@ -1,26 +1,30 @@
-options:
-  logging: CLOUD_LOGGING_ONLY           # ← 에러 조건 (c) 만족
-  # 필요시 아래처럼 regional user-owned bucket 정책을 동시에 쓸 수도 있습니다.
-  # defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+# cloudbuild.yaml
+# Artifact Registry를 쓰는 예시입니다. (gcr도 동일 패턴)
+substitutions:
+  _REGION: asia-northeast3
+  _REPO: etf-analyst-repo
+  _IMAGE: etf-analyst-img
+  # 이미지 경로 예시(Artifact Registry):
+  # ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}
 steps:
-  - name: gcr.io/cloud-builders/docker
-    args: ['build', '-t', '$LOCATION-docker.pkg.dev/$PROJECT_ID/run-images/$REPO_NAME:$SHORT_SHA', '.']
-  - name: gcr.io/cloud-builders/docker
-    args: ['push', '$LOCATION-docker.pkg.dev/$PROJECT_ID/run-images/$REPO_NAME:$SHORT_SHA']
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    entrypoint: gcloud
+  - name: 'gcr.io/cloud-builders/docker'
     args:
-      - run
-      - deploy
-      - my-web
-      - --image=$LOCATION-docker.pkg.dev/$PROJECT_ID/run-images/$REPO_NAME:$SHORT_SHA
-      - --region=asia-northeast3
-      - --platform=managed
-      - --allow-unauthenticated
-      # Cloud SQL 인스턴스 연결
-      - --add-cloudsql-instances=<PROJECT>:<REGION>:<INSTANCE>
-      # 환경변수 주입(예시)
-      - --set-env-vars=DB_INSTANCE_CONNECTION_NAME=<PROJECT>:<REGION>:<INSTANCE>,DB_NAME=appdb,DB_USER=appuser
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:${COMMIT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:latest'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:${COMMIT_SHA}'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:latest'
 images:
   - $LOCATION-docker.pkg.dev/$PROJECT_ID/run-images/$REPO_NAME:$SHORT_SHA
 options:
