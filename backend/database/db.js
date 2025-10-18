@@ -1,115 +1,53 @@
-/**
- * Database connection and query utilities
- */
-
+// db.js
 const { Pool } = require('pg');
-require('dotenv').config();
 
-// Database connection configuration
-const poolConfig = {
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-};
+// 환경변수 로드
+const {
+  DB_USER,
+  DB_PASS,
+  DB_NAME,
+  CLOUD_SQL_CONNECTION_NAME, // ex: "etf-analysis-prod:asia-northeast3:etf-analysis-db"
+  DB_HOST, // (옵션: 프라이빗 IP로 연결 시만 사용)
+  NODE_ENV,
+} = process.env;
 
-// Cloud SQL connection (for Cloud Run)
-if (process.env.CLOUD_SQL_CONNECTION_NAME && process.env.DB_SOCKET_PATH) {
-    poolConfig.host = `${process.env.DB_SOCKET_PATH}/${process.env.CLOUD_SQL_CONNECTION_NAME}`;
-} else {
-    poolConfig.host = process.env.DB_HOST || 'localhost';
-    poolConfig.port = process.env.DB_PORT || 5432;
-}
-
-poolConfig.database = process.env.DB_NAME || 'etf_analysis';
-poolConfig.user = process.env.DB_USER || 'postgres';
-poolConfig.password = process.env.DB_PASSWORD;
-
-const pool = new Pool(poolConfig);
-
-// Error handling
-pool.on('error', (err, client) => {
-    console.error('Unexpected error on idle client', err);
-    process.exit(-1);
-});
-
-/**
- * Execute a query
- */
-async function query(text, params) {
-    const start = Date.now();
-    try {
-        const res = await pool.query(text, params);
-        const duration = Date.now() - start;
-        console.log('Executed query', { text, duration, rows: res.rowCount });
-        return res;
-    } catch (error) {
-        console.error('Database query error', { text, error: error.message });
-        throw error;
+// ✅ Cloud Run에서 Cloud SQL 연결을 위해 host를 자동 결정
+// 1) 유닉스 소켓 연결 (권장: Serverless VPC Access 불필요)
+// 2) DB_HOST가 설정되어 있으면 TCP 방식으로 연결(프라이빗 IP)
+const dbConfig = DB_HOST
+  ? {
+      user: DB_USER,
+      password: DB_PASS,
+      database: DB_NAME,
+      host: DB_HOST,
+      port: 5432,
+      ssl: false,
     }
-}
-
-/**
- * Get a client from the pool for transactions
- */
-async function getClient() {
-    const client = await pool.connect();
-    const query = client.query;
-    const release = client.release;
-
-    // Set a timeout of 5 seconds
-    const timeout = setTimeout(() => {
-        console.error('A client has been checked out for more than 5 seconds!');
-    }, 5000);
-
-    // Override release method
-    client.release = () => {
-        clearTimeout(timeout);
-        client.query = query;
-        client.release = release;
-        return release.apply(client);
+  : {
+      user: DB_USER,
+      password: DB_PASS,
+      database: DB_NAME,
+      host: `/cloudsql/${CLOUD_SQL_CONNECTION_NAME}`,
     };
 
-    return client;
-}
+// 풀 생성
+const pool = new Pool(dbConfig);
 
-/**
- * Initialize database (create tables)
- */
-async function initDatabase() {
-    const fs = require('fs');
-    const path = require('path');
-    
-    try {
-        const schemaPath = path.join(__dirname, 'schema.sql');
-        const schema = fs.readFileSync(schemaPath, 'utf8');
-        
-        await query(schema);
-        console.log('Database initialized successfully');
-        return true;
-    } catch (error) {
-        console.error('Failed to initialize database:', error);
-        throw error;
-    }
-}
-
-/**
- * Test database connection
- */
+// 커넥션 테스트용 함수 (선택)
 async function testConnection() {
-    try {
-        const result = await query('SELECT NOW()');
-        console.log('Database connection successful:', result.rows[0]);
-        return true;
-    } catch (error) {
-        console.error('Database connection failed:', error);
-        return false;
-    }
+  try {
+    const result = await pool.query('SELECT NOW() as current_time');
+    console.log(
+      `[DB CONNECTED] ${result.rows[0].current_time} (${CLOUD_SQL_CONNECTION_NAME})`
+    );
+  } catch (err) {
+    console.error('[DB CONNECTION ERROR]', err);
+  }
 }
 
-module.exports = {
-    query,
-    getClient,
-    pool,
-    initDatabase,
-    testConnection
-};
+// 개발환경에서만 테스트 자동 실행
+if (NODE_ENV !== 'production') {
+  testConnection();
+}
+
+module.exports = pool;
