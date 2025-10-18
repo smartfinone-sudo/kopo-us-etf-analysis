@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETF 저비중 종목 분석 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .nav-active {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 네비게이션 -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-chart-line text-3xl text-blue-600"></i>
+                        <span class="ml-2 text-xl font-bold text-gray-800">ETF 저비중 종목 분석</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="showPage('upload')" id="nav-upload" class="px-4 py-2 rounded-md text-sm font-medium nav-active">
+                        <i class="fas fa-upload mr-2"></i>데이터 업로드
+                    </button>
+                    <button onclick="showPage('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <i class="fas fa-chart-bar mr-2"></i>대시보드
+                    </button>
+                    <button onclick="showPage('history')" id="nav-history" class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <i class="fas fa-history mr-2"></i>업로드 히스토리
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 메인 컨테이너 -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 업로드 페이지 -->
+        <div id="page-upload" class="page-content">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-file-csv text-blue-600 mr-2"></i>
+                    ETF 포트폴리오 CSV 업로드
+                </h2>
+
+                <!-- CSV 다운로드 가이드 -->
+                <div class="mb-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-3">
+                        <i class="fas fa-info-circle mr-2"></i>CSV 다운로드 가이드
+                    </h3>
+                    <div class="space-y-2 text-sm text-blue-800">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-3 rounded shadow-sm">
+                                <p class="font-semibold mb-1">📊 SCHD (Schwab)</p>
+                                <a href="https://www.schwabassetmanagement.com/products/schd" target="_blank" class="text-blue-600 hover:underline text-xs">
+                                    schwabassetmanagement.com/products/schd
+                                </a>
+                                <p class="text-xs text-gray-600 mt-1">→ Holdings 탭 → Export/Download</p>
+                            </div>
+                            <div class="bg-white p-3 rounded shadow-sm">
+                                <p class="font-semibold mb-1">📊 VOO (Vanguard)</p>
+                                <a href="https://investor.vanguard.com/investment-products/etfs/profile/voo" target="_blank" class="text-blue-600 hover:underline text-xs">
+                                    investor.vanguard.com/etfs/profile/voo
+                                </a>
+                                <p class="text-xs text-gray-600 mt-1">→ Portfolio & Management → Download</p>
+                            </div>
+                            <div class="bg-white p-3 rounded shadow-sm">
+                                <p class="font-semibold mb-1">📊 VTI (Vanguard)</p>
+                                <a href="https://investor.vanguard.com/investment-products/etfs/profile/vti" target="_blank" class="text-blue-600 hover:underline text-xs">
+                                    investor.vanguard.com/etfs/profile/vti
+                                </a>
+                                <p class="text-xs text-gray-600 mt-1">→ Portfolio & Management → Download</p>
+                            </div>
+                            <div class="bg-white p-3 rounded shadow-sm">
+                                <p class="font-semibold mb-1">📊 IVV (BlackRock)</p>
+                                <a href="https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf" target="_blank" class="text-blue-600 hover:underline text-xs">
+                                    ishares.com/us/products/239726
+                                </a>
+                                <p class="text-xs text-gray-600 mt-1">→ Holdings → Download to Excel/CSV</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ETF 선택 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        ETF 선택 <span class="text-red-500">*</span>
+                    </label>
+                    <select id="etf-select" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">ETF를 선택하세요</option>
+                        <option value="SCHD">SCHD - Schwab U.S. Dividend Equity ETF</option>
+                        <option value="VOO">VOO - Vanguard S&P 500 ETF</option>
+                        <option value="VTI">VTI - Vanguard Total Stock Market ETF</option>
+                        <option value="IVV">IVV - iShares Core S&P 500 ETF</option>
+                    </select>
+                </div>
+
+                <!-- 파일 업로드 -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        CSV 파일 선택 <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex items-center justify-center w-full">
+                        <label class="flex flex-col w-full h-32 border-4 border-dashed border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-400 cursor-pointer transition">
+                            <div class="flex flex-col items-center justify-center pt-7">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-500">
+                                    <span class="font-semibold">클릭하여 파일 선택</span> 또는 드래그 앤 드롭
+                                </p>
+                                <p class="text-xs text-gray-400 mt-1">CSV 파일만 지원</p>
+                            </div>
+                            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
+                        </label>
+                    </div>
+                    <div id="file-info" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+
+                <!-- 업로드 버튼 -->
+                <div class="flex justify-end space-x-4">
+                    <button onclick="resetUpload()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition">
+                        <i class="fas fa-redo mr-2"></i>초기화
+                    </button>
+                    <button onclick="uploadCSV()" id="upload-btn" disabled class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        <i class="fas fa-upload mr-2"></i>업로드 및 분석
+                    </button>
+                </div>
+
+                <!-- 파싱 미리보기 -->
+                <div id="preview-section" class="mt-8 hidden">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-eye mr-2 text-green-600"></i>데이터 미리보기 및 검증
+                    </h3>
+                    <div id="preview-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4"></div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                            <thead class="bg-gray-100">
+                                <tr id="preview-header"></tr>
+                            </thead>
+                            <tbody id="preview-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 진행 상태 -->
+                <div id="upload-progress" class="mt-6 hidden">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p id="progress-text" class="text-sm text-gray-600 mt-2 text-center"></p>
+                </div>
+
+                <!-- 결과 메시지 -->
+                <div id="upload-result" class="mt-6 hidden"></div>
+            </div>
+        </div>
+
+        <!-- 대시보드 페이지 -->
+        <div id="page-dashboard" class="page-content hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-chart-bar text-green-600 mr-2"></i>
+                    저비중 종목 분석 대시보드
+                </h2>
+
+                <!-- 필터 컨트롤 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ETF 필터</label>
+                        <select id="filter-etf" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="">전체 ETF</option>
+                            <option value="SCHD">SCHD</option>
+                            <option value="VOO">VOO</option>
+                            <option value="VTI">VTI</option>
+                            <option value="IVV">IVV</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">최대 비중 (%, 0=전체)</label>
+                        <input type="number" id="filter-weight" value="0" step="0.1" min="0" max="100" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="0 = 전체 종목">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">스냅샷 선택</label>
+                        <select id="filter-snapshot" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="">최신 데이터</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="loadDashboard()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+                            <i class="fas fa-sync-alt mr-2"></i>새로고침
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 통계 카드 -->
+                <div id="stats-cards" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
+
+                <!-- 로딩 상태 표시 -->
+                <div id="table-loading" class="hidden mb-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-blue-800">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                <span id="loading-message">데이터를 불러오는 중...</span>
+                            </span>
+                            <span class="text-sm text-blue-600" id="loading-progress">0%</span>
+                        </div>
+                        <div class="w-full bg-blue-200 rounded-full h-2">
+                            <div id="loading-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 저비중 종목 테이블 -->
+                <div class="overflow-x-auto">
+                    <h3 class="text-lg font-semibold mb-4">저비중 종목 목록</h3>
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">티커</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">회사명</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ETF</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">비중 (%)</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">섹터</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">ROE</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">EPS</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">PBR</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">BPS</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">링크</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdings-table" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+
+                <!-- 페이지네이션 -->
+                <div id="pagination" class="mt-6 flex justify-center"></div>
+            </div>
+        </div>
+
+        <!-- 히스토리 페이지 -->
+        <div id="page-history" class="page-content hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-history text-purple-600 mr-2"></i>
+                    업로드 히스토리 및 변화 추적
+                </h2>
+
+                <!-- 히스토리 테이블 -->
+                <div class="overflow-x-auto mb-8">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">업로드 일시</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">ETF</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">종목 수</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">파일명</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">상태</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+
+                <!-- 변화 분석 -->
+                <div id="change-analysis" class="hidden">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-exchange-alt text-orange-600 mr-2"></i>
+                        포트폴리오 변화 분석
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <h4 class="text-sm font-semibold text-green-800 mb-2">
+                                <i class="fas fa-plus-circle mr-1"></i>신규 편입
+                            </h4>
+                            <div id="new-holdings" class="text-sm text-green-700"></div>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                            <h4 class="text-sm font-semibold text-red-800 mb-2">
+                                <i class="fas fa-minus-circle mr-1"></i>제외된 종목
+                            </h4>
+                            <div id="removed-holdings" class="text-sm text-red-700"></div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h4 class="text-sm font-semibold text-blue-800 mb-2">
+                                <i class="fas fa-arrow-up mr-1"></i>비중 증가
+                            </h4>
+                            <div id="increased-holdings" class="text-sm text-blue-700"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 종목 상세 정보 모달 -->
+    <div id="stock-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800" id="modal-title"></h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script src="js/csvParser.js"></script>
+    <script src="js/dataManager.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

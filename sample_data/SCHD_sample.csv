@@ -1,0 +1,46 @@
+Ticker,Name,Weight,Shares,Market Value,Sector
+AAPL,Apple Inc.,4.52%,1250000,215000000,Technology
+ABBV,AbbVie Inc.,4.21%,850000,135000000,Healthcare
+BMY,Bristol-Myers Squibb,3.98%,920000,48000000,Healthcare
+VZ,Verizon Communications,3.85%,1100000,44000000,Telecommunications
+PFE,Pfizer Inc.,3.72%,980000,29000000,Healthcare
+MRK,Merck & Co.,3.65%,760000,82000000,Healthcare
+CSCO,Cisco Systems,3.54%,890000,44000000,Technology
+PEP,PepsiCo Inc.,3.48%,680000,120000000,Consumer Staples
+KO,Coca-Cola Company,3.42%,710000,42000000,Consumer Staples
+AVGO,Broadcom Inc.,3.35%,280000,245000000,Technology
+TXN,Texas Instruments,3.28%,450000,78000000,Technology
+AMGN,Amgen Inc.,3.15%,380000,103000000,Healthcare
+HD,Home Depot Inc.,3.08%,420000,145000000,Consumer Discretionary
+CVX,Chevron Corporation,2.95%,520000,77000000,Energy
+XOM,Exxon Mobil Corporation,2.88%,610000,64000000,Energy
+IBM,International Business Machines,2.75%,390000,54000000,Technology
+QCOM,QUALCOMM Incorporated,2.68%,340000,55000000,Technology
+BLK,BlackRock Inc.,2.54%,125000,96000000,Financials
+CME,CME Group Inc.,2.47%,210000,44000000,Financials
+DUK,Duke Energy Corporation,2.35%,320000,33000000,Utilities
+SO,Southern Company,2.28%,380000,27000000,Utilities
+AEP,American Electric Power,2.15%,290000,27000000,Utilities
+WEC,WEC Energy Group,1.98%,240000,22000000,Utilities
+D,Dominion Energy,1.87%,270000,14000000,Utilities
+ED,Consolidated Edison,1.75%,190000,18000000,Utilities
+AEE,Ameren Corporation,1.68%,180000,14000000,Utilities
+CMS,CMS Energy Corporation,1.54%,170000,11000000,Utilities
+EVRG,Evergy Inc.,1.42%,150000,9000000,Utilities
+FE,FirstEnergy Corporation,1.35%,160000,6000000,Utilities
+ES,Eversource Energy,1.28%,140000,9000000,Utilities
+PPL,PPL Corporation,1.15%,130000,4000000,Utilities
+NI,NiSource Inc.,1.08%,120000,3000000,Utilities
+PNW,Pinnacle West Capital,0.98%,110000,9000000,Utilities
+LNT,Alliant Energy Corporation,0.87%,100000,5000000,Utilities
+ATO,Atmos Energy Corporation,0.76%,90000,11000000,Utilities
+CNP,CenterPoint Energy,0.68%,85000,2000000,Utilities
+OGE,OGE Energy Corporation,0.54%,75000,3000000,Utilities
+DTE,DTE Energy Company,0.48%,70000,8000000,Utilities
+XEL,Xcel Energy Inc.,0.42%,65000,4000000,Utilities
+AWK,American Water Works,0.35%,55000,8000000,Utilities
+SRE,Sempra Energy,0.28%,50000,7000000,Utilities
+PEG,Public Service Enterprise,0.22%,45000,3000000,Utilities
+WTR,Essential Utilities Inc.,0.18%,40000,2000000,Utilities
+IDA,IDACORP Inc.,0.14%,35000,4000000,Utilities
+NWE,NorthWestern Corporation,0.11%,30000,2000000,Utilities
