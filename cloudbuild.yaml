@@ -25,7 +25,5 @@ steps:
     args:
       - 'push'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:latest'
-images:
-  - $LOCATION-docker.pkg.dev/$PROJECT_ID/run-images/$REPO_NAME:$SHORT_SHA
 options:
   logging: CLOUD_LOGGING_ONLY
