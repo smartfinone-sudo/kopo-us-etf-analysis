@@ -4,7 +4,6 @@
  */
 
 const express = require('express');
-const pool = require('./backend/database/db');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
@@ -31,15 +30,7 @@ app.use((req, res, next) => {
     next();
 });
 
-app.get('/health/db', async (req, res) => {
-  try {
-    const { rows } = await pool.query('SELECT 1 as ok');
-    res.json({ db_ok: rows[0].ok === 1 });
-  } catch (e) {
-    console.error('DB health check failed:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
+
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
