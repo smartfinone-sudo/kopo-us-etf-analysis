@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const pool = require('./db');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
@@ -28,6 +29,16 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
     next();
+});
+
+app.get('/health/db', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT 1 as ok');
+    res.json({ db_ok: rows[0].ok === 1 });
+  } catch (e) {
+    console.error('DB health check failed:', e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Health check endpoint
