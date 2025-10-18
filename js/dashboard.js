@@ -4,7 +4,6 @@
 
 let currentPage = 1;
 let currentData = [];
-let stockDetailsCache = {}; // 재무정보 캐시
 
 /**
  * 대시보드 로드
@@ -27,7 +26,7 @@ async function loadDashboard() {
         // 통계 카드 렌더링
         renderStatsCards(holdings);
 
-        // 테이블 렌더링 (재무정보 포함)
+        // 테이블 렌더링 (재무정보 컬럼 제거 버전)
         await renderHoldingsTable(holdings, 1);
 
         hideLoading();
@@ -88,9 +87,9 @@ function renderStatsCards(holdings) {
     
     const totalCount = holdings.length;
     const avgWeight = holdings.length > 0 ? 
-    (holdings.reduce((sum, h) => sum + Number(h.weight || 0), 0) / holdings.length).toFixed(4) : 0;
+        (holdings.reduce((sum, h) => sum + Number(h.weight || 0), 0) / holdings.length).toFixed(4) : 0;
     const minWeight = holdings.length > 0 ? 
-    Math.min(...holdings.map(h => Number(h.weight || 0))).toFixed(4) : 0;
+        Math.min(...holdings.map(h => Number(h.weight || 0))).toFixed(4) : 0;
     const etfCount = new Set(holdings.map(h => h.etf_symbol)).size;
 
     const cards = [
@@ -136,7 +135,7 @@ function renderStatsCards(holdings) {
 }
 
 /**
- * 종목 테이블 렌더링 (최적화된 버전)
+ * 종목 테이블 렌더링 (재무정보 컬럼 제거 + 안전한 숫자 변환)
  */
 async function renderHoldingsTable(holdings, page = 1) {
     const tbody = document.getElementById('holdings-table');
@@ -153,7 +152,7 @@ async function renderHoldingsTable(holdings, page = 1) {
     if (pageData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>조회된 데이터가 없습니다.</p>
                 </td>
@@ -169,7 +168,7 @@ async function renderHoldingsTable(holdings, page = 1) {
     loadingBar.style.width = '0%';
     loadingProgress.textContent = '0%';
 
-    // 1단계: 기본 테이블 즉시 렌더링 (재무정보 없이)
+    // 1단계: 기본 테이블 즉시 렌더링 (재무정보 컬럼 없음)
     const basicRows = pageData.map(holding => `
         <tr class="hover:bg-gray-50" data-ticker="${holding.ticker}">
             <td class="px-4 py-3">
@@ -181,20 +180,10 @@ async function renderHoldingsTable(holdings, page = 1) {
                     ${holding.etf_symbol}
                 </span>
             </td>
-            <td class="px-4 py-3 text-right font-semibold">${!isNaN(parseFloat(holding.weight)) ? parseFloat(holding.weight).toFixed(4) : '0.0000'}%</td>
+            <td class="px-4 py-3 text-right font-semibold">
+                ${!isNaN(parseFloat(holding.weight)) ? Number(holding.weight).toFixed(4) : '0.0000'}%
+            </td>
             <td class="px-4 py-3 text-sm">${holding.sector || '-'}</td>
-            <td class="px-4 py-3 text-right text-sm text-gray-400">
-                <i class="fas fa-spinner fa-spin text-xs"></i>
-            </td>
-            <td class="px-4 py-3 text-right text-sm text-gray-400">
-                <i class="fas fa-spinner fa-spin text-xs"></i>
-            </td>
-            <td class="px-4 py-3 text-right text-sm text-gray-400">
-                <i class="fas fa-spinner fa-spin text-xs"></i>
-            </td>
-            <td class="px-4 py-3 text-right text-sm text-gray-400">
-                <i class="fas fa-spinner fa-spin text-xs"></i>
-            </td>
             <td class="px-4 py-3 text-center">
                 <div class="flex justify-center space-x-2">
                     <a href="https://finance.yahoo.com/quote/${holding.ticker}" 
@@ -215,60 +204,17 @@ async function renderHoldingsTable(holdings, page = 1) {
     `).join('');
 
     tbody.innerHTML = basicRows;
-    loadingBar.style.width = '30%';
-    loadingProgress.textContent = '30%';
 
-    // 페이지네이션 먼저 렌더링
+    // 진행률 및 페이지네이션 갱신
+    loadingBar.style.width = '100%';
+    loadingProgress.textContent = '100%';
+    loadingMessage.textContent = '완료!';
     renderPagination(holdings.length, page, perPage);
 
-    // 2단계: 재무정보 백그라운드 로딩 (캐시 활용)
-    loadingMessage.textContent = '재무정보 로딩 중...';
-    
-    // 배치 처리 (10개씩 동시 조회)
-    const batchSize = 10;
-    let completed = 0;
-    
-    for (let i = 0; i < pageData.length; i += batchSize) {
-        const batch = pageData.slice(i, i + batchSize);
-        
-        // 병렬로 조회
-        await Promise.all(batch.map(async (holding) => {
-            try {
-                const details = await dataManager.getStockDetails(holding.ticker);
-                
-                // DOM 업데이트 (해당 행만)
-                const row = tbody.querySelector(`tr[data-ticker="${holding.ticker}"]`);
-                if (row) {
-                    const cells = row.querySelectorAll('td');
-                    cells[5].innerHTML = `<span class="text-sm">${details?.roe || '-'}</span>`;
-                    cells[6].innerHTML = `<span class="text-sm">${details?.eps || '-'}</span>`;
-                    cells[7].innerHTML = `<span class="text-sm">${details?.pbr || '-'}</span>`;
-                    cells[8].innerHTML = `<span class="text-sm">${details?.bps || '-'}</span>`;
-                }
-            } catch (error) {
-                // 실패 시 - 표시
-                const row = tbody.querySelector(`tr[data-ticker="${holding.ticker}"]`);
-                if (row) {
-                    const cells = row.querySelectorAll('td');
-                    for (let j = 5; j <= 8; j++) {
-                        cells[j].innerHTML = '<span class="text-sm">-</span>';
-                    }
-                }
-            }
-        }));
-        
-        // 진행률 업데이트
-        completed += batch.length;
-        const progress = 30 + Math.round((completed / pageData.length) * 70);
-        loadingBar.style.width = progress + '%';
-        loadingProgress.textContent = progress + '%';
-    }
-
     // 로딩 완료
-    loadingMessage.textContent = '완료!';
     setTimeout(() => {
         loadingEl.classList.add('hidden');
-    }, 500);
+    }, 300);
 }
 
 /**
@@ -326,6 +272,7 @@ function filterDashboard() {
 
 /**
  * 종목 상세 정보 표시
+ * (재무지표 컬럼을 테이블에서 제거했지만, 상세 모달은 유지)
  */
 async function showStockDetails(ticker, companyName) {
     const modal = document.getElementById('stock-modal');
@@ -420,8 +367,8 @@ function showLoading(message) {
     if (loadingEl) {
         loadingEl.classList.remove('hidden');
         loadingMessage.textContent = message || '데이터를 불러오는 중...';
-        loadingBar.style.width = '50%';
-        loadingProgress.textContent = '50%';
+        loadingBar.style.width = '10%';
+        loadingProgress.textContent = '10%';
     }
 }
 
