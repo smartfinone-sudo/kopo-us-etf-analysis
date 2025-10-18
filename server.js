@@ -30,8 +30,6 @@ app.use((req, res, next) => {
     next();
 });
 
-
-
 // Health check endpoint
 app.get('/health', async (req, res) => {
     try {
