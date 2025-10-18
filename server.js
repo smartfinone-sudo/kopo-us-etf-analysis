@@ -4,7 +4,7 @@
  */
 
 const express = require('express');
-const pool = require('./db');
+const pool = require('./backend/database/db');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
