@@ -88,9 +88,9 @@ function renderStatsCards(holdings) {
     
     const totalCount = holdings.length;
     const avgWeight = holdings.length > 0 ? 
-        (holdings.reduce((sum, h) => sum + h.weight, 0) / holdings.length).toFixed(4) : 0;
+    (holdings.reduce((sum, h) => sum + Number(h.weight || 0), 0) / holdings.length).toFixed(4) : 0;
     const minWeight = holdings.length > 0 ? 
-        Math.min(...holdings.map(h => h.weight)).toFixed(4) : 0;
+    Math.min(...holdings.map(h => Number(h.weight || 0))).toFixed(4) : 0;
     const etfCount = new Set(holdings.map(h => h.etf_symbol)).size;
 
     const cards = [
@@ -181,7 +181,7 @@ async function renderHoldingsTable(holdings, page = 1) {
                     ${holding.etf_symbol}
                 </span>
             </td>
-            <td class="px-4 py-3 text-right font-semibold">${holding.weight.toFixed(4)}%</td>
+            <td class="px-4 py-3 text-right font-semibold">${!isNaN(parseFloat(holding.weight)) ? parseFloat(holding.weight).toFixed(4) : '0.0000'}%</td>
             <td class="px-4 py-3 text-sm">${holding.sector || '-'}</td>
             <td class="px-4 py-3 text-right text-sm text-gray-400">
                 <i class="fas fa-spinner fa-spin text-xs"></i>
