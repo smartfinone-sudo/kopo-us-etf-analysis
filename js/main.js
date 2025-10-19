@@ -479,3 +479,67 @@ function displayChanges(changes) {
     // 스크롤
     analysisDiv.scrollIntoView({ behavior: 'smooth' });
 }
+
+/* ===========================================================
+ * (병합) Basic Auth: 쓰기 요청 자동 인증 헤더 주입
+ * - 기존 코드 변경 없이 /tables 및 /api/upload의 POST/PUT/PATCH/DELETE에만 적용
+ * - 인증정보는 메모리에만 보관(새로고침 시 초기화)
+ * =========================================================== */
+(function () {
+  let __uploaderCreds = null; // { user, pass }
+
+  function __setCreds(user, pass) { __uploaderCreds = { user, pass }; }
+  async function __ensureCreds() {
+    if (__uploaderCreds?.user && __uploaderCreds?.pass) return;
+    const uEl = document.getElementById('upload-user');
+    const pEl = document.getElementById('upload-pass');
+    if (uEl?.value && pEl?.value) { __setCreds(uEl.value.trim(), pEl.value); return; }
+    const u = window.prompt('업로드 아이디를 입력하세요:'); if (!u) throw new Error('업로더 아이디가 필요합니다.');
+    const p = window.prompt('비밀번호를 입력하세요:'); if (!p) throw new Error('업로더 비밀번호가 필요합니다.');
+    __setCreds(u.trim(), p);
+  }
+
+  function __basicHeader() {
+    const { user, pass } = __uploaderCreds || {};
+    if (!user || !pass) return null;
+    return 'Basic ' + btoa(`${user}:${pass}`);
+  }
+
+  function __isWrite(method) {
+    const m = (method || 'GET').toUpperCase();
+    return m === 'POST' || m === 'PUT' || m === 'PATCH' || m === 'DELETE';
+  }
+
+  function __isProtected(url) {
+    try {
+      const u = new URL(url, window.location.origin);
+      if (u.origin !== window.location.origin) return false; // 동일 출처만
+      return u.pathname.startsWith('/tables') || u.pathname.startsWith('/api/upload');
+    } catch {
+      return false;
+    }
+  }
+
+  const __origFetch = window.fetch;
+  window.fetch = async function (input, init) {
+    const url = typeof input === 'string' ? input : (input && input.url) || '';
+    const method = (init && init.method) || (typeof input !== 'string' ? input.method : 'GET');
+
+    if (__isWrite(method) && __isProtected(url)) {
+      await __ensureCreds();
+      const auth = __basicHeader();
+      if (!auth) throw new Error('업로더 인증 정보가 없습니다.');
+
+      const headers = new Headers((init && init.headers) || (typeof input !== 'string' ? input.headers : undefined) || {});
+      if (!headers.has('Authorization')) headers.set('Authorization', auth);
+
+      const newInit = Object.assign({}, init, { headers });
+      return __origFetch.call(this, input, newInit);
+    }
+
+    return __origFetch.call(this, input, init);
+  };
+
+  // 선택: 외부에서 수동 설정을 원할 때 사용
+  window.setUploaderCreds = (u, p) => __setCreds(u, p);
+})();
