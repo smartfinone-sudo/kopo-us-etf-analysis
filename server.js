@@ -14,6 +14,36 @@ const tablesRouter = require('./backend/routes/tables');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// ======== Basic Auth for write methods (UPLOAD_USER / UPLOAD_PASS via env) ========
+const UPLOAD_USER = process.env.UPLOAD_USER || '';
+const UPLOAD_PASS = process.env.UPLOAD_PASS || '';
+
+function requireBasicAuth(req, res, next) {
+    if (!UPLOAD_USER || !UPLOAD_PASS) {
+        // no creds set => skip auth (dev convenience)
+        return next();
+    }
+    const hdr = req.headers['authorization'] || '';
+    if (!hdr.startsWith('Basic ')) {
+        res.set('WWW-Authenticate', 'Basic realm="Uploads"');
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const decoded = Buffer.from(hdr.slice(6), 'base64').toString('utf8');
+    const sep = decoded.indexOf(':');
+    const user = decoded.slice(0, sep);
+    const pass = decoded.slice(sep + 1);
+    if (user === UPLOAD_USER && pass === UPLOAD_PASS) return next();
+    res.set('WWW-Authenticate', 'Basic realm="Uploads"');
+    return res.status(401).json({ error: 'Unauthorized' });
+}
+
+function protectWriteMethods(req, res, next) {
+    const WRITE = ['POST','PUT','PATCH','DELETE'];
+    if (WRITE.includes((req.method || '').toUpperCase())) return requireBasicAuth(req,res,next);
+    return next();
+}
+// ================================================================================
+
 // Middleware
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
@@ -49,7 +79,7 @@ app.get('/health', async (req, res) => {
 });
 
 // API Routes
-app.use('/tables', tablesRouter);
+app.use('/tables', protectWriteMethods, tablesRouter);
 
 // Serve static files (frontend)
 app.use(express.static(path.join(__dirname), {
@@ -63,7 +93,7 @@ app.use(express.static(path.join(__dirname), {
     }
 }));
 
-// Serve index.html for all other routes (SPA support)
+// Serve index.html for all other routes (`SPA support)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
