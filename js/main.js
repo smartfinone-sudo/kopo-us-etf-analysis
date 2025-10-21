@@ -40,6 +40,8 @@ function showPage(pageName) {
     // 페이지별 로드 함수 호출
     if (pageName === 'dashboard') {
         loadDashboard();
+    } else if (pageName === 'compare') {
+        loadComparePage();
     } else if (pageName === 'history') {
         loadHistory();
     }

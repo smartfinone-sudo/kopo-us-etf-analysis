@@ -36,6 +36,9 @@
                     <button onclick="showPage('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
                         <i class="fas fa-chart-bar mr-2"></i>대시보드
                     </button>
+                    <button onclick="showPage('compare')" id="nav-compare" class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
+                        <i class="fas fa-exchange-alt mr-2"></i>포트폴리오 비교
+                    </button>
                     <button onclick="showPage('history')" id="nav-history" class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
                         <i class="fas fa-history mr-2"></i>업로드 히스토리
                     </button>
@@ -249,6 +252,154 @@
             </div>
         </div>
 
+        <!-- 포트폴리오 비교 페이지 -->
+        <div id="page-compare" class="page-content hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-exchange-alt text-blue-600 mr-2"></i>
+                    포트폴리오 비교
+                </h2>
+
+                <!-- 설명 -->
+                <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        데이터베이스에 저장된 포트폴리오 스냅샷을 선택하여 비교합니다. 
+                        서로 다른 ETF 간 비교도 가능합니다.
+                    </p>
+                </div>
+
+                <!-- 비교 대상 선택 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- 기준 데이터 (최신) -->
+                    <div class="border border-gray-300 rounded-lg p-4 bg-green-50">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                            기준 데이터 (최신)
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ETF 선택</label>
+                                <select id="compare-base-etf" onchange="loadCompareSnapshots('base')" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500">
+                                    <option value="">ETF를 선택하세요</option>
+                                    <option value="SCHD">SCHD</option>
+                                    <option value="VOO">VOO</option>
+                                    <option value="VTI">VTI</option>
+                                    <option value="IVV">IVV</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">스냅샷 선택</label>
+                                <select id="compare-base-snapshot" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500">
+                                    <option value="">ETF를 먼저 선택하세요</option>
+                                </select>
+                            </div>
+                            <div id="compare-base-info" class="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                                선택된 데이터 정보가 여기에 표시됩니다.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 비교 대상 데이터 -->
+                    <div class="border border-gray-300 rounded-lg p-4 bg-orange-50">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-exchange-alt text-orange-600 mr-2"></i>
+                            비교 대상 데이터
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ETF 선택</label>
+                                <select id="compare-target-etf" onchange="loadCompareSnapshots('target')" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500">
+                                    <option value="">ETF를 선택하세요</option>
+                                    <option value="SCHD">SCHD</option>
+                                    <option value="VOO">VOO</option>
+                                    <option value="VTI">VTI</option>
+                                    <option value="IVV">IVV</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">스냅샷 선택</label>
+                                <select id="compare-target-snapshot" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500">
+                                    <option value="">ETF를 먼저 선택하세요</option>
+                                </select>
+                            </div>
+                            <div id="compare-target-info" class="text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                                선택된 데이터 정보가 여기에 표시됩니다.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 비교 실행 버튼 -->
+                <div class="flex justify-center mb-6">
+                    <button onclick="executeCompare()" id="compare-btn" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        <i class="fas fa-balance-scale mr-2"></i>비교 실행
+                    </button>
+                </div>
+
+                <!-- 비교 결과 섹션 -->
+                <div id="compare-results" class="hidden">
+                    <hr class="my-6">
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-chart-line text-purple-600 mr-2"></i>
+                        비교 결과
+                    </h3>
+
+                    <!-- 통계 카드 -->
+                    <div id="compare-stats" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"></div>
+
+                    <!-- 변화 분석 -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <h4 class="text-sm font-semibold text-green-800 mb-3">
+                                <i class="fas fa-plus-circle mr-1"></i>
+                                신규 편입 (<span id="new-count">0</span>개)
+                            </h4>
+                            <div id="new-holdings-compare" class="text-sm text-green-700 max-h-64 overflow-y-auto"></div>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                            <h4 class="text-sm font-semibold text-red-800 mb-3">
+                                <i class="fas fa-minus-circle mr-1"></i>
+                                제외된 종목 (<span id="removed-count">0</span>개)
+                            </h4>
+                            <div id="removed-holdings-compare" class="text-sm text-red-700 max-h-64 overflow-y-auto"></div>
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h4 class="text-sm font-semibold text-blue-800 mb-3">
+                                <i class="fas fa-arrows-alt-v mr-1"></i>
+                                비중 변화 (<span id="changed-count">0</span>개)
+                            </h4>
+                            <div id="changed-holdings-compare" class="text-sm text-blue-700 max-h-64 overflow-y-auto"></div>
+                        </div>
+                    </div>
+
+                    <!-- 상세 비교 테이블 -->
+                    <div class="overflow-x-auto">
+                        <h4 class="text-lg font-semibold mb-4">상세 비교 테이블</h4>
+                        <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">상태</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">티커</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">회사명</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">기준 ETF</th>
+                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">기준 비중</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">비교 ETF</th>
+                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">비교 비중</th>
+                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">변화량</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compare-table" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 페이지네이션 -->
+                    <div id="compare-pagination" class="mt-6 flex justify-center"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- 히스토리 페이지 -->
         <div id="page-history" class="page-content hidden">
             <div class="bg-white rounded-lg shadow-lg p-6">
@@ -321,6 +472,7 @@
     <script src="js/csvParser.js"></script>
     <script src="js/dataManager.js"></script>
     <script src="js/dashboard.js"></script>
+    <script src="js/compare.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

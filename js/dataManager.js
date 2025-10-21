@@ -403,6 +403,110 @@ class DataManager {
             minute: '2-digit'
         });
     }
+
+    /**
+     * 특정 ETF의 모든 스냅샷 목록 조회 (upload_date 기준 정렬)
+     */
+    async getSnapshotsByETF(etfSymbol) {
+        try {
+            const response = await this.getRecords('etf_holdings', 1, 10000);
+            const holdings = response.data.filter(h => h.etf_symbol === etfSymbol);
+            
+            // snapshot_id별로 그룹화하고 upload_date 기준으로 정렬
+            const snapshotMap = {};
+            holdings.forEach(h => {
+                if (!snapshotMap[h.snapshot_id]) {
+                    snapshotMap[h.snapshot_id] = {
+                        snapshot_id: h.snapshot_id,
+                        upload_date: h.upload_date,
+                        etf_symbol: h.etf_symbol,
+                        count: 0
+                    };
+                }
+                snapshotMap[h.snapshot_id].count++;
+            });
+
+            // 배열로 변환하고 upload_date 내림차순 정렬 (최신순)
+            const snapshots = Object.values(snapshotMap).sort((a, b) => b.upload_date - a.upload_date);
+            return snapshots;
+        } catch (error) {
+            console.error('스냅샷 목록 조회 실패:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 특정 스냅샷의 모든 종목 조회
+     */
+    async getHoldingsBySnapshotId(snapshotId) {
+        try {
+            const response = await this.getRecords('etf_holdings', 1, 10000);
+            const holdings = response.data.filter(h => h.snapshot_id === snapshotId);
+            return holdings.sort((a, b) => b.weight - a.weight); // 비중 내림차순
+        } catch (error) {
+            console.error('스냅샷 종목 조회 실패:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 두 스냅샷 비교 (서로 다른 ETF도 가능)
+     */
+    async compareSnapshotsById(baseSnapshotId, targetSnapshotId) {
+        try {
+            const baseData = await this.getHoldingsBySnapshotId(baseSnapshotId);
+            const targetData = await this.getHoldingsBySnapshotId(targetSnapshotId);
+
+            // 티커별 맵 생성
+            const baseMap = new Map(baseData.map(h => [h.ticker, h]));
+            const targetMap = new Map(targetData.map(h => [h.ticker, h]));
+
+            // 신규 편입: target에는 있지만 base에는 없는 종목
+            const newHoldings = targetData.filter(h => !baseMap.has(h.ticker));
+
+            // 제외된 종목: base에는 있지만 target에는 없는 종목
+            const removedHoldings = baseData.filter(h => !targetMap.has(h.ticker));
+
+            // 비중 변화: 양쪽 모두 있는 종목
+            const weightChanges = [];
+            targetData.forEach(targetH => {
+                const baseH = baseMap.get(targetH.ticker);
+                if (baseH && Math.abs(targetH.weight - baseH.weight) > 0.0001) {
+                    weightChanges.push({
+                        ticker: targetH.ticker,
+                        company_name: targetH.company_name,
+                        base_etf: baseH.etf_symbol,
+                        base_weight: baseH.weight,
+                        target_etf: targetH.etf_symbol,
+                        target_weight: targetH.weight,
+                        change: targetH.weight - baseH.weight,
+                        change_percent: baseH.weight > 0 ? ((targetH.weight - baseH.weight) / baseH.weight * 100) : 0
+                    });
+                }
+            });
+
+            // 비중 변화량 절대값 기준 정렬
+            weightChanges.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+
+            return {
+                baseData: baseData,
+                targetData: targetData,
+                newHoldings: newHoldings,
+                removedHoldings: removedHoldings,
+                weightChanges: weightChanges,
+                summary: {
+                    base_count: baseData.length,
+                    target_count: targetData.length,
+                    new_count: newHoldings.length,
+                    removed_count: removedHoldings.length,
+                    changed_count: weightChanges.length
+                }
+            };
+        } catch (error) {
+            console.error('스냅샷 비교 실패:', error);
+            throw error;
+        }
+    }
 }
 
 // 전역 인스턴스
