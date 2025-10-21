@@ -215,16 +215,19 @@ function renderNewHoldings(holdings) {
         return;
     }
 
-    container.innerHTML = holdings.slice(0, 20).map(h => `
-        <div class="py-1 border-b border-green-100 last:border-0">
-            <div class="font-semibold">${h.ticker}</div>
-            <div class="text-xs text-gray-600">${h.company_name || '-'}</div>
-            <div class="text-xs">
-                <span class="font-medium">${h.etf_symbol}</span> - 
-                <span class="text-green-700 font-semibold">${h.weight.toFixed(4)}%</span>
+    container.innerHTML = holdings.slice(0, 20).map(h => {
+        const weight = typeof h.weight === 'string' ? parseFloat(h.weight) : h.weight;
+        return `
+            <div class="py-1 border-b border-green-100 last:border-0">
+                <div class="font-semibold">${h.ticker}</div>
+                <div class="text-xs text-gray-600">${h.company_name || '-'}</div>
+                <div class="text-xs">
+                    <span class="font-medium">${h.etf_symbol}</span> - 
+                    <span class="text-green-700 font-semibold">${weight.toFixed(4)}%</span>
+                </div>
             </div>
-        </div>
-    `).join('') + (holdings.length > 20 ? `<div class="text-xs mt-2 text-gray-500">... 외 ${holdings.length - 20}개</div>` : '');
+        `;
+    }).join('') + (holdings.length > 20 ? `<div class="text-xs mt-2 text-gray-500">... 외 ${holdings.length - 20}개</div>` : '');
 }
 
 /**
@@ -241,16 +244,19 @@ function renderRemovedHoldings(holdings) {
         return;
     }
 
-    container.innerHTML = holdings.slice(0, 20).map(h => `
-        <div class="py-1 border-b border-red-100 last:border-0">
-            <div class="font-semibold">${h.ticker}</div>
-            <div class="text-xs text-gray-600">${h.company_name || '-'}</div>
-            <div class="text-xs">
-                <span class="font-medium">${h.etf_symbol}</span> - 
-                <span class="text-red-700 font-semibold">${h.weight.toFixed(4)}%</span>
+    container.innerHTML = holdings.slice(0, 20).map(h => {
+        const weight = typeof h.weight === 'string' ? parseFloat(h.weight) : h.weight;
+        return `
+            <div class="py-1 border-b border-red-100 last:border-0">
+                <div class="font-semibold">${h.ticker}</div>
+                <div class="text-xs text-gray-600">${h.company_name || '-'}</div>
+                <div class="text-xs">
+                    <span class="font-medium">${h.etf_symbol}</span> - 
+                    <span class="text-red-700 font-semibold">${weight.toFixed(4)}%</span>
+                </div>
             </div>
-        </div>
-    `).join('') + (holdings.length > 20 ? `<div class="text-xs mt-2 text-gray-500">... 외 ${holdings.length - 20}개</div>` : '');
+        `;
+    }).join('') + (holdings.length > 20 ? `<div class="text-xs mt-2 text-gray-500">... 외 ${holdings.length - 20}개</div>` : '');
 }
 
 /**
@@ -374,14 +380,19 @@ function renderCompareTable(data, page = 1) {
             rowClass = `bg-${changeColor}-50`;
         }
 
-        const baseWeightDisplay = item.base_weight !== null ? item.base_weight.toFixed(4) + '%' : '-';
-        const targetWeightDisplay = item.target_weight !== null ? item.target_weight.toFixed(4) + '%' : '-';
+        // 숫자 타입 변환 보장
+        const baseWeight = item.base_weight !== null ? (typeof item.base_weight === 'string' ? parseFloat(item.base_weight) : item.base_weight) : null;
+        const targetWeight = item.target_weight !== null ? (typeof item.target_weight === 'string' ? parseFloat(item.target_weight) : item.target_weight) : null;
+        const change = item.change !== null ? (typeof item.change === 'string' ? parseFloat(item.change) : item.change) : null;
+        
+        const baseWeightDisplay = baseWeight !== null ? baseWeight.toFixed(4) + '%' : '-';
+        const targetWeightDisplay = targetWeight !== null ? targetWeight.toFixed(4) + '%' : '-';
         
         let changeDisplay = '-';
-        if (item.change !== null) {
-            const changeColor = item.change > 0 ? 'text-blue-600' : 'text-orange-600';
-            const changeIcon = item.change > 0 ? '↑' : '↓';
-            changeDisplay = `<span class="${changeColor} font-semibold">${changeIcon} ${Math.abs(item.change).toFixed(4)}%</span>`;
+        if (change !== null) {
+            const changeColor = change > 0 ? 'text-blue-600' : 'text-orange-600';
+            const changeIcon = change > 0 ? '↑' : '↓';
+            changeDisplay = `<span class="${changeColor} font-semibold">${changeIcon} ${Math.abs(change).toFixed(4)}%</span>`;
         }
 
         return `

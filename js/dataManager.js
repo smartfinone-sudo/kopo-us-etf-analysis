@@ -394,7 +394,21 @@ class DataManager {
      * 날짜 포맷팅
      */
     formatDate(timestamp) {
-        const date = new Date(timestamp);
+        // timestamp를 숫자로 변환
+        const numericTimestamp = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp;
+        
+        // 유효하지 않은 timestamp 처리
+        if (isNaN(numericTimestamp) || numericTimestamp === null || numericTimestamp === undefined) {
+            return 'Invalid Date';
+        }
+        
+        const date = new Date(numericTimestamp);
+        
+        // Invalid Date 체크
+        if (isNaN(date.getTime())) {
+            return 'Invalid Date';
+        }
+        
         return date.toLocaleString('ko-KR', {
             year: 'numeric',
             month: '2-digit',
@@ -416,9 +430,12 @@ class DataManager {
             const snapshotMap = {};
             holdings.forEach(h => {
                 if (!snapshotMap[h.snapshot_id]) {
+                    // upload_date를 숫자로 변환
+                    const uploadDate = typeof h.upload_date === 'string' ? parseInt(h.upload_date) : h.upload_date;
+                    
                     snapshotMap[h.snapshot_id] = {
                         snapshot_id: h.snapshot_id,
-                        upload_date: h.upload_date,
+                        upload_date: uploadDate,
                         etf_symbol: h.etf_symbol,
                         count: 0
                     };
@@ -441,7 +458,16 @@ class DataManager {
     async getHoldingsBySnapshotId(snapshotId) {
         try {
             const response = await this.getRecords('etf_holdings', 1, 10000);
-            const holdings = response.data.filter(h => h.snapshot_id === snapshotId);
+            let holdings = response.data.filter(h => h.snapshot_id === snapshotId);
+            
+            // weight를 숫자로 변환
+            holdings = holdings.map(h => ({
+                ...h,
+                weight: typeof h.weight === 'string' ? parseFloat(h.weight) : h.weight,
+                shares: typeof h.shares === 'string' ? parseFloat(h.shares) : h.shares,
+                market_value: typeof h.market_value === 'string' ? parseFloat(h.market_value) : h.market_value
+            }));
+            
             return holdings.sort((a, b) => b.weight - a.weight); // 비중 내림차순
         } catch (error) {
             console.error('스냅샷 종목 조회 실패:', error);

@@ -53,6 +53,11 @@ function showPage(pageName) {
 function setupDragAndDrop() {
     const dropArea = document.querySelector('label[for="csv-file"]');
     
+    // dropArea가 없으면 (비교 페이지 등) 함수 종료
+    if (!dropArea) {
+        return;
+    }
+    
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
     });
