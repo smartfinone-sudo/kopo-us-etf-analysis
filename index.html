@@ -178,31 +178,76 @@
                 </h2>
 
                 <!-- 필터 컨트롤 -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">ETF 필터</label>
-                        <select id="filter-etf" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                            <option value="">전체 ETF</option>
-                            <option value="SCHD">SCHD</option>
-                            <option value="VOO">VOO</option>
-                            <option value="VTI">VTI</option>
-                            <option value="IVV">IVV</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">최대 비중 (%, 0=전체)</label>
-                        <input type="number" id="filter-weight" value="0" step="0.1" min="0" max="100" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="0 = 전체 종목">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">스냅샷 선택</label>
-                        <select id="filter-snapshot" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                            <option value="">최신 데이터</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="loadDashboard()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
-                            <i class="fas fa-sync-alt mr-2"></i>새로고침
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-filter mr-2 text-blue-600"></i>필터 및 검색
+                        </h3>
+                        <button onclick="resetFilters()" class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition">
+                            <i class="fas fa-redo mr-1"></i>필터 초기화
                         </button>
+                    </div>
+                    
+                    <!-- 첫 번째 행: 기본 필터 -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ETF 필터</label>
+                            <select id="filter-etf" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                                <option value="">전체 ETF</option>
+                                <option value="SCHD">SCHD</option>
+                                <option value="VOO">VOO</option>
+                                <option value="VTI">VTI</option>
+                                <option value="IVV">IVV</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">스냅샷 선택</label>
+                            <select id="filter-snapshot" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                                <option value="">최신 데이터</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">티커 검색</label>
+                            <input type="text" id="filter-ticker" placeholder="예: AAPL, MSFT" onkeyup="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">회사명 검색</label>
+                            <input type="text" id="filter-company" placeholder="회사명 입력" onkeyup="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <!-- 두 번째 행: 비중 및 섹터 필터 -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">비중 조건</label>
+                            <select id="filter-weight-condition" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                                <option value="all">전체</option>
+                                <option value="gte">이상 (≥)</option>
+                                <option value="lte">이하 (≤)</option>
+                                <option value="between">범위 포함</option>
+                                <option value="outside">범위 제외</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">비중 값 1 (%)</label>
+                            <input type="number" id="filter-weight-value1" value="" step="0.01" min="0" max="100" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="예: 0.5">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">비중 값 2 (%) <span class="text-xs text-gray-500">범위용</span></label>
+                            <input type="number" id="filter-weight-value2" value="" step="0.01" min="0" max="100" onchange="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500" placeholder="예: 2.0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">섹터 검색</label>
+                            <input type="text" id="filter-sector" placeholder="예: Technology" onkeyup="filterDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <!-- 활성 필터 표시 -->
+                    <div id="active-filters" class="mt-4 hidden">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-medium text-gray-700">활성 필터:</span>
+                            <div id="active-filters-list" class="flex gap-2 flex-wrap"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -231,15 +276,21 @@
                     <table class="min-w-full bg-white border border-gray-200 rounded-lg">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">티커</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">회사명</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ETF</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">비중 (%)</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">섹터</th>
-                                <!-- <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">ROE</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">EPS</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">PBR</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">BPS</th> -->
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200" onclick="sortTable('ticker')">
+                                    티커 <i id="sort-icon-ticker" class="fas fa-sort text-gray-400 ml-1"></i>
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200" onclick="sortTable('company_name')">
+                                    회사명 <i id="sort-icon-company_name" class="fas fa-sort text-gray-400 ml-1"></i>
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200" onclick="sortTable('etf_symbol')">
+                                    ETF <i id="sort-icon-etf_symbol" class="fas fa-sort text-gray-400 ml-1"></i>
+                                </th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200" onclick="sortTable('weight')">
+                                    비중 (%) <i id="sort-icon-weight" class="fas fa-sort text-gray-400 ml-1"></i>
+                                </th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200" onclick="sortTable('sector')">
+                                    섹터 <i id="sort-icon-sector" class="fas fa-sort text-gray-400 ml-1"></i>
+                                </th>
                                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">링크</th>
                             </tr>
                         </thead>

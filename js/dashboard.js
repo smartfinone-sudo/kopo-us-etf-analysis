@@ -4,6 +4,9 @@
 
 let currentPage = 1;
 let currentData = [];
+let allHoldingsData = []; // 전체 데이터 저장 (필터링 전)
+let sortColumn = null;
+let sortDirection = 'asc';
 
 /**
  * 대시보드 로드
@@ -12,22 +15,18 @@ async function loadDashboard() {
     try {
         showLoading('대시보드 데이터를 불러오는 중...');
 
-        const maxWeight = parseFloat(document.getElementById('filter-weight').value) || 0;
         const etfSymbol = document.getElementById('filter-etf').value || null;
         const snapshotId = document.getElementById('filter-snapshot').value || null;
 
-        // 저비중 종목 조회
-        const holdings = await dataManager.getLowWeightHoldings(maxWeight, etfSymbol, snapshotId);
-        currentData = holdings;
+        // 전체 종목 조회 (필터는 클라이언트에서 적용)
+        const holdings = await dataManager.getLowWeightHoldings(0, etfSymbol, snapshotId);
+        allHoldingsData = holdings;
 
         // 스냅샷 목록 업데이트
         await updateSnapshotList();
 
-        // 통계 카드 렌더링
-        renderStatsCards(holdings);
-
-        // 테이블 렌더링 (재무정보 컬럼 제거 버전)
-        await renderHoldingsTable(holdings, 1);
+        // 필터 적용
+        filterDashboard();
 
         hideLoading();
     } catch (error) {
@@ -267,7 +266,254 @@ async function goToPage(page) {
  * 필터 적용
  */
 function filterDashboard() {
-    loadDashboard();
+    // 필터 값 가져오기
+    const tickerFilter = document.getElementById('filter-ticker')?.value?.trim().toUpperCase() || '';
+    const companyFilter = document.getElementById('filter-company')?.value?.trim().toLowerCase() || '';
+    const sectorFilter = document.getElementById('filter-sector')?.value?.trim().toLowerCase() || '';
+    const weightCondition = document.getElementById('filter-weight-condition')?.value || 'all';
+    const weightValue1 = parseFloat(document.getElementById('filter-weight-value1')?.value) || null;
+    const weightValue2 = parseFloat(document.getElementById('filter-weight-value2')?.value) || null;
+
+    // 데이터 필터링
+    let filteredData = allHoldingsData.filter(holding => {
+        // 티커 필터
+        if (tickerFilter && !holding.ticker.toUpperCase().includes(tickerFilter)) {
+            return false;
+        }
+
+        // 회사명 필터
+        if (companyFilter && !(holding.company_name || '').toLowerCase().includes(companyFilter)) {
+            return false;
+        }
+
+        // 섹터 필터
+        if (sectorFilter && !(holding.sector || '').toLowerCase().includes(sectorFilter)) {
+            return false;
+        }
+
+        // 비중 필터
+        const weight = parseFloat(holding.weight) || 0;
+        if (weightCondition !== 'all' && weightValue1 !== null) {
+            switch (weightCondition) {
+                case 'gte': // 이상
+                    if (weight < weightValue1) return false;
+                    break;
+                case 'lte': // 이하
+                    if (weight > weightValue1) return false;
+                    break;
+                case 'between': // 범위 포함
+                    if (weightValue2 !== null) {
+                        const min = Math.min(weightValue1, weightValue2);
+                        const max = Math.max(weightValue1, weightValue2);
+                        if (weight < min || weight > max) return false;
+                    } else {
+                        if (weight < weightValue1) return false;
+                    }
+                    break;
+                case 'outside': // 범위 제외
+                    if (weightValue2 !== null) {
+                        const min = Math.min(weightValue1, weightValue2);
+                        const max = Math.max(weightValue1, weightValue2);
+                        if (weight >= min && weight <= max) return false;
+                    }
+                    break;
+            }
+        }
+
+        return true;
+    });
+
+    // 정렬 적용
+    if (sortColumn) {
+        filteredData = applySorting(filteredData, sortColumn, sortDirection);
+    }
+
+    currentData = filteredData;
+    currentPage = 1;
+
+    // 통계 카드 렌더링
+    renderStatsCards(filteredData);
+
+    // 테이블 렌더링
+    renderHoldingsTable(filteredData, 1);
+
+    // 활성 필터 표시
+    displayActiveFilters();
+}
+
+/**
+ * 정렬 적용
+ */
+function applySorting(data, column, direction) {
+    const sorted = [...data].sort((a, b) => {
+        let aVal = a[column];
+        let bVal = b[column];
+
+        // 비중은 숫자로 비교
+        if (column === 'weight') {
+            aVal = parseFloat(aVal) || 0;
+            bVal = parseFloat(bVal) || 0;
+        } else {
+            // 문자열은 대소문자 구분 없이 비교
+            aVal = (aVal || '').toString().toLowerCase();
+            bVal = (bVal || '').toString().toLowerCase();
+        }
+
+        if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    return sorted;
+}
+
+/**
+ * 테이블 정렬
+ */
+function sortTable(column) {
+    // 같은 컬럼을 다시 클릭하면 방향 전환
+    if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+    }
+
+    // 정렬 아이콘 업데이트
+    updateSortIcons(column, sortDirection);
+
+    // 필터 재적용 (정렬 포함)
+    filterDashboard();
+}
+
+/**
+ * 정렬 아이콘 업데이트
+ */
+function updateSortIcons(activeColumn, direction) {
+    // 모든 아이콘 초기화
+    const icons = ['ticker', 'company_name', 'etf_symbol', 'weight', 'sector'];
+    icons.forEach(col => {
+        const icon = document.getElementById(`sort-icon-${col}`);
+        if (icon) {
+            icon.className = 'fas fa-sort text-gray-400 ml-1';
+        }
+    });
+
+    // 활성 컬럼 아이콘 업데이트
+    const activeIcon = document.getElementById(`sort-icon-${activeColumn}`);
+    if (activeIcon) {
+        activeIcon.className = `fas fa-sort-${direction === 'asc' ? 'up' : 'down'} text-blue-600 ml-1`;
+    }
+}
+
+/**
+ * 필터 초기화
+ */
+function resetFilters() {
+    // 필터 입력 초기화
+    document.getElementById('filter-ticker').value = '';
+    document.getElementById('filter-company').value = '';
+    document.getElementById('filter-sector').value = '';
+    document.getElementById('filter-weight-condition').value = 'all';
+    document.getElementById('filter-weight-value1').value = '';
+    document.getElementById('filter-weight-value2').value = '';
+
+    // 정렬 초기화
+    sortColumn = null;
+    sortDirection = 'asc';
+    updateSortIcons('', 'asc');
+
+    // 필터 재적용
+    filterDashboard();
+}
+
+/**
+ * 활성 필터 표시
+ */
+function displayActiveFilters() {
+    const container = document.getElementById('active-filters');
+    const list = document.getElementById('active-filters-list');
+    const filters = [];
+
+    // 티커 필터
+    const ticker = document.getElementById('filter-ticker')?.value?.trim();
+    if (ticker) {
+        filters.push({ label: '티커', value: ticker, id: 'ticker' });
+    }
+
+    // 회사명 필터
+    const company = document.getElementById('filter-company')?.value?.trim();
+    if (company) {
+        filters.push({ label: '회사명', value: company, id: 'company' });
+    }
+
+    // 섹터 필터
+    const sector = document.getElementById('filter-sector')?.value?.trim();
+    if (sector) {
+        filters.push({ label: '섹터', value: sector, id: 'sector' });
+    }
+
+    // 비중 필터
+    const weightCondition = document.getElementById('filter-weight-condition')?.value;
+    const weightValue1 = document.getElementById('filter-weight-value1')?.value;
+    const weightValue2 = document.getElementById('filter-weight-value2')?.value;
+    
+    if (weightCondition && weightCondition !== 'all' && weightValue1) {
+        let weightText = '';
+        switch (weightCondition) {
+            case 'gte':
+                weightText = `≥ ${weightValue1}%`;
+                break;
+            case 'lte':
+                weightText = `≤ ${weightValue1}%`;
+                break;
+            case 'between':
+                weightText = weightValue2 ? `${weightValue1}% ~ ${weightValue2}%` : `≥ ${weightValue1}%`;
+                break;
+            case 'outside':
+                weightText = weightValue2 ? `${weightValue1}% ~ ${weightValue2}% 제외` : `< ${weightValue1}%`;
+                break;
+        }
+        filters.push({ label: '비중', value: weightText, id: 'weight' });
+    }
+
+    // 필터 표시
+    if (filters.length > 0) {
+        list.innerHTML = filters.map(f => `
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                <strong class="mr-1">${f.label}:</strong> ${f.value}
+                <button onclick="clearSingleFilter('${f.id}')" class="ml-2 text-blue-600 hover:text-blue-800">
+                    <i class="fas fa-times"></i>
+                </button>
+            </span>
+        `).join('');
+        container.classList.remove('hidden');
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
+/**
+ * 개별 필터 제거
+ */
+function clearSingleFilter(filterId) {
+    switch (filterId) {
+        case 'ticker':
+            document.getElementById('filter-ticker').value = '';
+            break;
+        case 'company':
+            document.getElementById('filter-company').value = '';
+            break;
+        case 'sector':
+            document.getElementById('filter-sector').value = '';
+            break;
+        case 'weight':
+            document.getElementById('filter-weight-condition').value = 'all';
+            document.getElementById('filter-weight-value1').value = '';
+            document.getElementById('filter-weight-value2').value = '';
+            break;
+    }
+    filterDashboard();
 }
 
 /**
