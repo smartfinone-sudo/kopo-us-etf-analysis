@@ -15,8 +15,11 @@ async function loadDashboard() {
     try {
         showLoading('대시보드 데이터를 불러오는 중...');
 
-        const etfSymbol = document.getElementById('filter-etf').value || null;
-        const snapshotId = document.getElementById('filter-snapshot').value || null;
+        const etfFilter = document.getElementById('filter-etf');
+        const snapshotFilter = document.getElementById('filter-snapshot');
+        
+        const etfSymbol = etfFilter ? (etfFilter.value || null) : null;
+        const snapshotId = snapshotFilter ? (snapshotFilter.value || null) : null;
 
         // 전체 종목 조회 (필터는 클라이언트에서 적용)
         const holdings = await dataManager.getLowWeightHoldings(0, etfSymbol, snapshotId);
@@ -266,6 +269,15 @@ async function goToPage(page) {
  * 필터 적용
  */
 function filterDashboard() {
+    // allHoldingsData가 비어있으면 빈 배열로 처리
+    if (!allHoldingsData || allHoldingsData.length === 0) {
+        currentData = [];
+        renderStatsCards([]);
+        renderHoldingsTable([], 1);
+        displayActiveFilters();
+        return;
+    }
+
     // 필터 값 가져오기
     const tickerFilter = document.getElementById('filter-ticker')?.value?.trim().toUpperCase() || '';
     const companyFilter = document.getElementById('filter-company')?.value?.trim().toLowerCase() || '';
@@ -410,13 +422,20 @@ function updateSortIcons(activeColumn, direction) {
  * 필터 초기화
  */
 function resetFilters() {
-    // 필터 입력 초기화
-    document.getElementById('filter-ticker').value = '';
-    document.getElementById('filter-company').value = '';
-    document.getElementById('filter-sector').value = '';
-    document.getElementById('filter-weight-condition').value = 'all';
-    document.getElementById('filter-weight-value1').value = '';
-    document.getElementById('filter-weight-value2').value = '';
+    // 필터 입력 초기화 (요소가 존재하는 경우만)
+    const tickerEl = document.getElementById('filter-ticker');
+    const companyEl = document.getElementById('filter-company');
+    const sectorEl = document.getElementById('filter-sector');
+    const conditionEl = document.getElementById('filter-weight-condition');
+    const value1El = document.getElementById('filter-weight-value1');
+    const value2El = document.getElementById('filter-weight-value2');
+    
+    if (tickerEl) tickerEl.value = '';
+    if (companyEl) companyEl.value = '';
+    if (sectorEl) sectorEl.value = '';
+    if (conditionEl) conditionEl.value = 'all';
+    if (value1El) value1El.value = '';
+    if (value2El) value2El.value = '';
 
     // 정렬 초기화
     sortColumn = null;
